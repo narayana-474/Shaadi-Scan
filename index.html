@@ -479,6 +479,110 @@
       .gallery-grid { grid-template-columns: 1fr; }
       .hero-border { inset: 10px; }
     }
+    /* ── MUSIC GATE OVERLAY ── */
+    #music-gate {
+      position: fixed; inset: 0; z-index: 99999;
+      background: linear-gradient(160deg, #1a1209 0%, #2e1f0e 50%, #1a1209 100%);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: opacity 0.8s ease;
+    }
+    #music-gate.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .gate-inner {
+      text-align: center;
+      position: relative;
+      user-select: none;
+    }
+    .gate-rings {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .gate-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(201,168,76,0.2);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: ring-pulse 3s ease-in-out infinite;
+    }
+    .gate-ring.r1 { width: 180px; height: 180px; animation-delay: 0s; }
+    .gate-ring.r2 { width: 260px; height: 260px; animation-delay: 0.6s; }
+    .gate-ring.r3 { width: 340px; height: 340px; animation-delay: 1.2s; }
+    @keyframes ring-pulse {
+      0%, 100% { opacity: 0.15; transform: translate(-50%, -50%) scale(1); }
+      50%       { opacity: 0.4;  transform: translate(-50%, -50%) scale(1.04); }
+    }
+    .gate-note {
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+      animation: note-float 2.5s ease-in-out infinite;
+      display: block;
+    }
+    @keyframes note-float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-8px); }
+    }
+    .gate-names {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 300;
+      color: var(--gold-pale);
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+    }
+    .gate-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(0.7rem, 2vw, 0.85rem);
+      letter-spacing: 0.5em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+      animation: tap-blink 1.8s ease-in-out infinite;
+    }
+    @keyframes tap-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+    .gate-sub {
+      font-family: 'Lato', sans-serif;
+      font-size: 0.7rem;
+      color: rgba(201,168,76,0.45);
+      letter-spacing: 0.2em;
+    }
+
+    /* ── FLOATING MUSIC BUTTON ── */
+    #music-btn {
+      position: fixed;
+      bottom: 1.8rem; right: 1.8rem;
+      z-index: 9998;
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      border: 1px solid rgba(201,168,76,0.5);
+      background: rgba(26,18,9,0.85);
+      color: var(--gold);
+      font-size: 1.2rem;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      display: none; /* shown after gate dismissed */
+      align-items: center; justify-content: center;
+      transition: border-color 0.3s, transform 0.2s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    #music-btn:hover {
+      border-color: var(--gold);
+      transform: scale(1.1);
+    }
+    #music-btn.playing { animation: spin-slow 4s linear infinite; }
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -487,9 +591,27 @@
 <canvas id="petals"></canvas>
 
 <!-- Background Music -->
-<audio id="background-music" loop autoplay playsinline>
-  <source src="https://github.com/narayana-474/Virosh/raw/refs/heads/main/Inkem%20Inkem%20Inkem%20Kaavaale%20Flute%20Siva%20Geetha%20Govindam.mp3" type="audio/mpeg">
+<audio id="background-music" loop playsinline preload="auto">
+  <source src="https://raw.githubusercontent.com/narayana-474/Virosh/main/Inkem%20Inkem%20Inkem%20Kaavaale%20Flute%20Siva%20Geetha%20Govindam.mp3" type="audio/mpeg">
 </audio>
+
+<!-- ══════════ TAP TO ENTER OVERLAY ══════════ -->
+<div id="music-gate">
+  <div class="gate-inner">
+    <div class="gate-rings">
+      <div class="gate-ring r1"></div>
+      <div class="gate-ring r2"></div>
+      <div class="gate-ring r3"></div>
+    </div>
+    <div class="gate-note">♪</div>
+    <div class="gate-names">Vijay &amp; Rashmika</div>
+    <div class="gate-title">TAP TO ENTER</div>
+    <div class="gate-sub">with music &amp; blessings</div>
+  </div>
+</div>
+
+<!-- Floating music toggle button -->
+<button id="music-btn" title="Toggle music">♪</button>
 
 <!-- ══════════ HERO ══════════ -->
 <section class="hero">
@@ -717,16 +839,39 @@ function animate() {
 animate();
 
 const music = document.getElementById('background-music');
+const gate  = document.getElementById('music-gate');
+const btn   = document.getElementById('music-btn');
+let isPlaying = false;
 
-function tryPlayMusic() {
-  if (!music) return;
-  const p = music.play();
-  if (p !== undefined) p.catch(() => {
-    // autoplay blocked by browser
+/* ── Dismiss overlay & start music on first tap/click ── */
+gate.addEventListener('click', function () {
+  gate.classList.add('hide');
+  setTimeout(() => { gate.style.display = 'none'; }, 850);
+
+  music.volume = 0.6;
+  music.play().then(() => {
+    isPlaying = true;
+    btn.style.display = 'flex';
+    btn.classList.add('playing');
+  }).catch(() => {
+    btn.style.display = 'flex'; // show btn even if play fails
   });
-}
+});
 
-window.addEventListener('load', tryPlayMusic);
+/* ── Floating toggle button ── */
+btn.addEventListener('click', function () {
+  if (isPlaying) {
+    music.pause();
+    isPlaying = false;
+    btn.textContent = '⏸';
+    btn.classList.remove('playing');
+  } else {
+    music.play();
+    isPlaying = true;
+    btn.textContent = '♪';
+    btn.classList.add('playing');
+  }
+});
 </script>
 
 </body>
