@@ -556,33 +556,7 @@
       letter-spacing: 0.2em;
     }
 
-    /* ── FLOATING MUSIC BUTTON ── */
-    #music-btn {
-      position: fixed;
-      bottom: 1.8rem; right: 1.8rem;
-      z-index: 9998;
-      width: 46px; height: 46px;
-      border-radius: 50%;
-      border: 1px solid rgba(201,168,76,0.5);
-      background: rgba(26,18,9,0.85);
-      color: var(--gold);
-      font-size: 1.2rem;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      display: none; /* shown after gate dismissed */
-      align-items: center; justify-content: center;
-      transition: border-color 0.3s, transform 0.2s;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    #music-btn:hover {
-      border-color: var(--gold);
-      transform: scale(1.1);
-    }
-    #music-btn.playing { animation: spin-slow 4s linear infinite; }
-    @keyframes spin-slow {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
+
   </style>
 </head>
 <body>
@@ -610,8 +584,7 @@
   </div>
 </div>
 
-<!-- Floating music toggle button -->
-<button id="music-btn" title="Toggle music">♪</button>
+
 
 <!-- ══════════ HERO ══════════ -->
 <section class="hero">
@@ -840,37 +813,15 @@ animate();
 
 const music = document.getElementById('background-music');
 const gate  = document.getElementById('music-gate');
-const btn   = document.getElementById('music-btn');
-let isPlaying = false;
 
-/* ── Dismiss overlay & start music on first tap/click ── */
+/* ── Dismiss overlay & start music from beginning on tap ── */
 gate.addEventListener('click', function () {
   gate.classList.add('hide');
   setTimeout(() => { gate.style.display = 'none'; }, 850);
 
+  music.currentTime = 0;
   music.volume = 0.6;
-  music.play().then(() => {
-    isPlaying = true;
-    btn.style.display = 'flex';
-    btn.classList.add('playing');
-  }).catch(() => {
-    btn.style.display = 'flex'; // show btn even if play fails
-  });
-});
-
-/* ── Floating toggle button ── */
-btn.addEventListener('click', function () {
-  if (isPlaying) {
-    music.pause();
-    isPlaying = false;
-    btn.textContent = '⏸';
-    btn.classList.remove('playing');
-  } else {
-    music.play();
-    isPlaying = true;
-    btn.textContent = '♪';
-    btn.classList.add('playing');
-  }
+  music.play();
 });
 </script>
 
